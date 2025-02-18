@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="ru" dir="ltr">
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=windows-1251" />
+        <title>RODOS-12</title>
+        <script src="/mchp.js" type="text/javascript"></script>
+        <style>
+            .wrapper {
+                width: 1024px;
+                min-height: 100vh;
+                margin: 0 auto;
+            }
+
+            table {
+                width: 100%;
+                border-collapse: collapse;
+                margin-top: 20px;
+            }
+
+            th,
+            td {
+                border: 1px solid #ccc;
+                padding: 8px;
+                text-align: left;
+            }
+
+            th {
+                background-color: #f0f0f0;
+            }
+
+            .channel-select {
+                width: 60px;
+            }
+
+            .status-button {
+                padding: 5px;
+                width: 80px; /* Увеличили ширину, чтобы уместить "Обработка" */
+                height: 30px;
+                border: none;
+                cursor: pointer;
+                color: white;
+                text-align: center;
+                line-height: 20px;
+            }
+
+            .status-button.on {
+                background-color: red;
+            }
+
+            .status-button.off {
+                background-color: gray;
+            }
+
+            .status-button.processing {
+                background-color: #ffc107; /* Желтый для обработки */
+                cursor: default;
+            }
+
+            .delete-button {
+                background-color: #f44336;
+                color: white;
+                padding: 5px 10px;
+                border: none;
+                cursor: pointer;
+            }
+
+            .add-row-button {
+                margin-top: 10px;
+                padding: 10px 20px;
+                background-color: #4caf50;
+                color: white;
+                border: none;
+                cursor: pointer;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="wrapper">
+            <h1>Управление устройствами</h1>
+            <button class="add-row-button" onclick="addRow()">Добавить устройство</button>
+            <table id="deviceTable">
+                <thead>
+                    <tr>
+                        <th>Имя устройства</th>
+                        <th>IP</th>
+                        <th>Канал</th>
+                        <th>Состояние</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- Строки таблицы будут добавлены динамически -->
+                </tbody>
+            </table>
+        </div>
+
+        <script>
+            function isValidIP(ip) {
+                if (!ip) return false;
+                const parts = ip.split(".");
+                if (parts.length !== 4) return false;
+                for (const part of parts) {
+                    const num = parseInt(part, 10);
+                    if (isNaN(num) || num < 0 || num > 255) return false;
+                }
+                return true;
+            }
+
+            function createTableRow(deviceName = "", ipAddress = "", channel = 1, status = "off") {
+                const row = document.createElement("tr");
+
+                const nameCell = document.createElement("td");
+                const nameInput = document.createElement("input");
+                nameInput.type = "text";
+                nameInput.value = deviceName;
+                nameInput.addEventListener("input", () => {
+                    saveTableData();
+                });
+                nameCell.appendChild(nameInput);
+                row.appendChild(nameCell);
+
+                const ipCell = document.createElement("td");
+                const ipInput = document.createElement("input");
+                ipInput.type = "text";
+                ipInput.value = ipAddress;
+                ipInput.addEventListener("input", () => {
+                    if (isValidIP(ipInput.value)) {
+                        ipInput.style.borderColor = "green";
+                    } else {
+                        ipInput.style.borderColor = "red";
+                    }
+                    saveTableData();
+                });
+                ipCell.appendChild(ipInput);
+                row.appendChild(ipCell);
+
+                const channelCell = document.createElement("td");
+                const channelSelect = document.createElement("select");
+                channelSelect.className = "channel-select";
+                for (let i = 1; i <= 8; i++) {
+                    const option = document.createElement("option");
+                    option.value = i;
+                    option.text = i;
+                    if (i === parseInt(channel, 10)) {
+                        option.selected = true;
+                    }
+                    channelSelect.appendChild(option);
+                }
+                channelSelect.addEventListener("change", () => {
+                    // Добавлено
+                    saveTableData();
+                });
+                channelCell.appendChild(channelSelect);
+                row.appendChild(channelCell);
+
+                const statusCell = document.createElement("td");
+                const statusButton = document.createElement("button");
+                statusButton.className = "status-button";
+                statusButton.textContent = status === "on" ? "Работает" : "Выключено";
+                statusButton.classList.add(status);
+
+                statusButton.addEventListener("click", async () => {
+                    const ip = row.cells[1].getElementsByTagName("input")[0].value;
+                    const channel = parseInt(row.cells[2].getElementsByTagName("select")[0].value, 10) - 1;
+
+                    // 2. Получаем состояния всех каналов для указанного IP
+                    const allChannelsStates = getAllChannelsStatesForIP(ip);
+
+                    // 3. Меняем состояние выбранного канала (локально, для отправки)
+                    const newState = statusButton.classList.contains("on") ? 0 : 1;
+                    allChannelsStates[channel] = newState;
+
+                    // 1. Переводим кнопку в состояние "Обработка"
+                    statusButton.textContent = "Обработка";
+                    statusButton.classList.remove("on", "off"); // Удаляем все классы состояния
+                    statusButton.classList.add("processing");
+                    statusButton.disabled = true; // Отключаем кнопку, пока обрабатывается запрос
+
+                    try {
+                        // 4. Вызываем setRel
+                        const setRelResult = await setRel(ip, allChannelsStates);
+
+                        if (setRelResult[channel].status === "Success") {
+                            console.log(`setRel success for ${ip}:`, allChannelsStates);
+                            statusButton.classList.add("updating");
+                        } else {
+                            console.error(`setRel failed for ${ip}:`, setRelResult.message || "Unknown error");
+                            // Обработка ошибки.  Оставляем кнопку в состоянии, которое было до нажатия.
+                            //  Обновляем класс кнопки, чтобы показать, что произошла ошибка, используя текущее (неизменное) состояние кнопки
+                            const currentStatus = statusButton.classList.contains("on") ? "on" : "off"; // Сохраняем текущий класс (on или off)
+                            statusButton.classList.remove("processing");
+                            statusButton.classList.add(currentStatus);
+                            statusButton.textContent = currentStatus === "on" ? "Работает" : "Выключено";
+                        }
+                    } catch (error) {
+                        console.error(`Error calling setRel for ${ip}:`, error);
+                        // Обработка ошибки сети.  Оставляем кнопку в состоянии, которое было до нажатия.
+                        //  Обновляем класс кнопки, чтобы показать, что произошла ошибка, используя текущее (неизменное) состояние кнопки
+                        const currentStatus = statusButton.classList.contains("on") ? "on" : "off"; // Сохраняем текущий класс (on или off)
+                        statusButton.classList.remove("processing");
+                        statusButton.classList.add(currentStatus);
+                        statusButton.textContent = currentStatus === "on" ? "Работает" : "Выключено";
+                    } finally {
+                        statusButton.disabled = false; // Включаем кнопку всегда, после завершения запроса (успех или ошибка)
+                    }
+                });
+                statusCell.appendChild(statusButton);
+                row.appendChild(statusCell);
+
+                const deleteCell = document.createElement("td");
+                const deleteButton = document.createElement("button");
+                deleteButton.className = "delete-button";
+                deleteButton.textContent = "Удалить";
+                deleteButton.addEventListener("click", () => {
+                    row.remove();
+                    saveTableData();
+                });
+                deleteCell.appendChild(deleteButton);
+                row.appendChild(deleteCell);
+
+                return row;
+            }
+
+            // Функция для получения состояний всех каналов для указанного IP
+            function getAllChannelsStatesForIP(ip) {
+                const states = Array(8).fill(0); // Инициализируем массив с состояниями всех каналов (по умолчанию 0)
+
+                const table = document.getElementById("deviceTable");
+                const rows = table.getElementsByTagName("tbody")[0].getElementsByTagName("tr");
+
+                for (let i = 0; i < rows.length; i++) {
+                    const row = rows[i];
+                    const rowIP = row.cells[1].getElementsByTagName("input")[0].value;
+                    if (rowIP === ip) {
+                        const channel = parseInt(row.cells[2].getElementsByTagName("select")[0].value, 10) - 1; // Индекс канала
+                        const statusButton = row.cells[3].getElementsByTagName("button")[0];
+                        const status = statusButton.classList.contains("on") ? 1 : 0; // 1 для "on", 0 для "off"
+                        states[channel] = status;
+                    }
+                }
+
+                return states;
+            }
+
+            function addRow(deviceName = "", ipAddress = "", channel = 1, status = "off") {
+                const tableBody = document.getElementById("deviceTable").getElementsByTagName("tbody")[0];
+                const newRow = createTableRow(deviceName, ipAddress, channel, status);
+                tableBody.appendChild(newRow);
+                saveTableData();
+            }
+
+            function saveTableData() {
+                const table = document.getElementById("deviceTable");
+                const rows = table.getElementsByTagName("tbody")[0].getElementsByTagName("tr");
+                const data = [];
+
+                for (let i = 0; i < rows.length; i++) {
+                    const row = rows[i];
+                    const name = row.cells[0].getElementsByTagName("input")[0].value;
+                    const ip = row.cells[1].getElementsByTagName("input")[0].value;
+                    const channel = row.cells[2].getElementsByTagName("select")[0].value;
+                    const statusButton = row.cells[3].getElementsByTagName("button")[0];
+                    const status = statusButton.classList.contains("on") ? "on" : "off";
+
+                    data.push({
+                        name: name,
+                        ip: ip,
+                        channel: channel,
+                        status: status,
+                    });
+                }
+                localStorage.setItem("deviceTableData", JSON.stringify(data));
+            }
+
+            function loadTableData() {
+                const data = localStorage.getItem("deviceTableData");
+                if (data) {
+                    const parsedData = JSON.parse(data);
+                    parsedData.forEach((item) => {
+                        addRow(item.name, item.ip, item.channel, item.status);
+                    });
+                }
+            }
+
+            // Функция для обновления состояния кнопок на основе данных getRel
+            function updateStatusButtons(results) {
+                const table = document.getElementById("deviceTable");
+                const rows = table.getElementsByTagName("tbody")[0].getElementsByTagName("tr");
+
+                for (let i = 0; i < rows.length; i++) {
+                    const row = rows[i];
+                    const ip = row.cells[1].getElementsByTagName("input")[0].value;
+                    const statusButton = row.cells[3].getElementsByTagName("button")[0];
+
+                    if (statusButton.classList.contains("processing") && !statusButton.classList.contains("updating")) {
+                        // Если кнопка в состоянии "Обработка", пропускаем ее обновление от getRel
+                        continue;
+                    }
+
+                    const deviceResult = results.find((result) => result.ip === ip);
+
+                    if (deviceResult && deviceResult.status === "Success" && deviceResult.response) {
+                        // Обновляем состояние кнопок на основе данных от getRel
+                        const channelSelect = row.cells[2].getElementsByTagName("select")[0];
+                        const selectedChannel = parseInt(channelSelect.value, 10) - 1; // Индекс выбранного канала
+
+                        const channelState = deviceResult.response[selectedChannel]; // 0 или 1
+
+                        //  Обновляем класс и текст кнопки только если это необходимо.
+                        if (
+                            (channelState === 1 && !statusButton.classList.contains("on")) ||
+                            (channelState === 0 && !statusButton.classList.contains("off"))
+                        ) {
+                            statusButton.classList.remove("on", "off", "processing", "updating");
+                            statusButton.classList.add(channelState === 1 ? "on" : "off");
+                            statusButton.textContent = channelState === 1 ? "Работает" : "Выключено";
+                        }
+                    } else {
+                        // Обработка ошибок или недоступности устройства.
+                        //  Например:  сделать кнопку серой и отключить ее, или отобразить сообщение об ошибке.
+                        statusButton.classList.remove("on", "off", "processing");
+                        statusButton.classList.add("off"); // По умолчанию делаем выключенной
+                        statusButton.textContent = "Выключено"; //  Удаляем "(Ошибка)" - состояние кнопки теперь определяется только getRel
+                    }
+                }
+            }
+
+            // Функция для выполнения Long Polling
+            async function startLongPolling() {
+                const table = document.getElementById("deviceTable");
+                const rows = table.getElementsByTagName("tbody")[0].getElementsByTagName("tr");
+                const ips = [];
+
+                for (let i = 0; i < rows.length; i++) {
+                    const ip = rows[i].cells[1].getElementsByTagName("input")[0].value;
+                    ips.push(ip);
+                }
+
+                if (ips.length === 0) {
+                    // Нет устройств, нечего опрашивать.
+                    console.log("Нет устройств для опроса.");
+                    return;
+                }
+
+                try {
+                    const results = await getRel(ips);
+                    updateStatusButtons(results);
+                } catch (error) {
+                    console.error("Ошибка при вызове getRel:", error);
+                    //  Обработка ошибок.  Например:  отобразить сообщение об ошибке, остановить long polling,
+                    //  или попробовать повторить запрос через некоторое время.
+                } finally {
+                    // Повторяем запрос через определенный интервал (например, 5 секунд)
+                    setTimeout(startLongPolling, 500); // 5 секунд
+                }
+            }
+
+            document.addEventListener("DOMContentLoaded", () => {
+                loadTableData();
+                // Запускаем Long Polling после загрузки таблицы
+                startLongPolling();
+            });
+        </script>
+    </body>
+</html>

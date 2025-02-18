@@ -1,0 +1,24 @@
+{
+    "name": "rodos",
+    "version": "1.0.0",
+    "main": "proxy.js",
+    "scripts": {
+        "test": "echo \"Error: no test specified\" && exit 1",
+        "pkg": "pkg ."
+    },
+    "author": "",
+    "license": "ISC",
+    "description": "",
+    "pkg": {
+        "targets": [
+            "node18-win-x64",
+            "node18-linux-x64"
+        ]
+    },
+    "bin": {
+        "curl_repeater": "proxy.js"
+    },
+    "dependencies": {
+        "express": "^4.21.2"
+    }
+}
