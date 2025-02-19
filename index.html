@@ -72,6 +72,30 @@
                 border: none;
                 cursor: pointer;
             }
+
+            /* Стиль для чекбокса */
+            .status-checkbox {
+                vertical-align: middle; /* Выравниваем по вертикали с кнопкой */
+                margin-left: 10px; /* Отступ от кнопки */
+                height: 24px; /* Высота как у кнопки (примерно) */
+                width: 24px; /* Ширина чекбокса */
+                cursor: pointer;
+                margin-right: 0; /* Убираем отступ справа */
+            }
+
+            /* Стилизация чекбокса (опционально, для лучшего вида) */
+            /* .status-checkbox:checked { */
+            /* background-color: #4caf50;  */
+            /* border-color: #4caf50; */
+            /*  Установите цвет галочки (необходимо использовать псевдоэлемент ::before или ::after)  */
+            /* } */
+
+            /*  Добавлено:  */
+            .status-cell {
+                display: flex;
+                align-items: center; /* Выравниваем элементы по вертикали */
+                justify-content: space-around; /* Прижимаем элементы к левому краю */
+            }
         </style>
     </head>
     <body>
@@ -106,7 +130,13 @@
                 return true;
             }
 
-            function createTableRow(deviceName = "", ipAddress = "", channel = 1, status = "off") {
+            function createTableRow(
+                deviceName = "",
+                ipAddress = "",
+                channel = 1,
+                status = "off",
+                checkboxChecked = false
+            ) {
                 const row = document.createElement("tr");
 
                 const nameCell = document.createElement("td");
@@ -154,27 +184,21 @@
                 row.appendChild(channelCell);
 
                 const statusCell = document.createElement("td");
+                statusCell.className = "status-cell"; //  Добавлено
+
                 const statusButton = document.createElement("button");
                 statusButton.className = "status-button";
                 statusButton.textContent = "Проверка";
-                // statusButton.disabled = true;
 
-                statusButton.addEventListener("click", async () => {
+                statusButton.addEventListener("click", () => {
                     const ip = row.cells[1].getElementsByTagName("input")[0].value;
                     const channel = parseInt(row.cells[2].getElementsByTagName("select")[0].value, 10) - 1;
-
-                    // 2. Получаем состояния всех каналов для указанного IP
-                    const allChannelsStates = getAllChannelsStatesForIP(ip);
-
-                    // 3. Меняем состояние выбранного канала (локально, для отправки)
                     const newState = statusButton.classList.contains("on") ? 0 : 1;
-                    allChannelsStates[channel] = newState;
 
-                    // 1. Переводим кнопку в состояние "Обработка"
                     statusButton.textContent = "Обработка";
-                    statusButton.classList.remove("on", "off"); // Удаляем все классы состояния
+                    statusButton.classList.remove("on", "off");
                     statusButton.classList.add("processing");
-                    statusButton.disabled = true; // Отключаем кнопку, пока обрабатывается запрос
+                    statusButton.disabled = true;
 
                     setChan(ip, channel, newState)
                         .then((res) => {
@@ -192,6 +216,17 @@
                         .catch((err) => console.log(err));
                 });
                 statusCell.appendChild(statusButton);
+
+                // Добавляем чекбокс
+                const statusCheckbox = document.createElement("input");
+                statusCheckbox.type = "checkbox";
+                statusCheckbox.className = "status-checkbox";
+                statusCheckbox.checked = checkboxChecked; // Устанавливаем состояние чекбокса
+                statusCheckbox.addEventListener("change", () => {
+                    saveTableData(); // Сохраняем состояние при изменении
+                });
+                statusCell.appendChild(statusCheckbox);
+
                 row.appendChild(statusCell);
 
                 const deleteCell = document.createElement("td");
@@ -229,9 +264,9 @@
                 return states;
             }
 
-            function addRow(deviceName = "", ipAddress = "", channel = 1, status = "off") {
+            function addRow(deviceName = "", ipAddress = "", channel = 1, status = "off", checkboxChecked = false) {
                 const tableBody = document.getElementById("deviceTable").getElementsByTagName("tbody")[0];
-                const newRow = createTableRow(deviceName, ipAddress, channel, status);
+                const newRow = createTableRow(deviceName, ipAddress, channel, status, checkboxChecked); // Передаем состояние чекбокса
                 tableBody.appendChild(newRow);
                 saveTableData();
             }
@@ -248,12 +283,15 @@
                     const channel = row.cells[2].getElementsByTagName("select")[0].value;
                     const statusButton = row.cells[3].getElementsByTagName("button")[0];
                     const status = statusButton.classList.contains("on") ? "on" : "off";
+                    const checkbox = row.cells[3].querySelector(".status-checkbox");
+                    const checkboxChecked = checkbox ? checkbox.checked : false; // Получаем состояние чекбокса
 
                     data.push({
                         name: name,
                         ip: ip,
                         channel: channel,
                         status: status,
+                        checkboxChecked: checkboxChecked, // Сохраняем состояние чекбокса
                     });
                 }
                 localStorage.setItem("deviceTableData", JSON.stringify(data));
@@ -264,7 +302,7 @@
                 if (data) {
                     const parsedData = JSON.parse(data);
                     parsedData.forEach((item) => {
-                        addRow(item.name, item.ip, item.channel, item.status);
+                        addRow(item.name, item.ip, item.channel, item.status, item.checkboxChecked); // Передаем состояние чекбокса
                     });
                 }
             }
