@@ -83,18 +83,34 @@
                 margin-right: 0; /* Убираем отступ справа */
             }
 
-            /* Стилизация чекбокса (опционально, для лучшего вида) */
-            /* .status-checkbox:checked { */
-            /* background-color: #4caf50;  */
-            /* border-color: #4caf50; */
-            /*  Установите цвет галочки (необходимо использовать псевдоэлемент ::before или ::after)  */
-            /* } */
-
             /*  Добавлено:  */
             .status-cell {
                 display: flex;
                 align-items: center; /* Выравниваем элементы по вертикали */
                 justify-content: space-around; /* Прижимаем элементы к левому краю */
+            }
+
+            /* Styles for the "Turn On/Off Selected" buttons */
+            .bulk-control-buttons {
+                margin-top: 20px;
+                text-align: center;
+            }
+
+            .bulk-control-button {
+                padding: 10px 20px;
+                border: none;
+                cursor: pointer;
+                color: white;
+                border-radius: 5px;
+                margin: 0 10px;
+            }
+
+            .bulk-control-button.on {
+                background-color: #4caf50; /* Green */
+            }
+
+            .bulk-control-button.off {
+                background-color: #f44336; /* Red */
             }
         </style>
     </head>
@@ -116,6 +132,12 @@
                     <!-- Строки таблицы будут добавлены динамически -->
                 </tbody>
             </table>
+
+            <!-- Buttons for bulk control -->
+            <div class="bulk-control-buttons">
+                <button class="bulk-control-button on" onclick="turnOnSelected()">Включить выбранные</button>
+                <button class="bulk-control-button off" onclick="turnOffSelected()">Выключить выбранные</button>
+            </div>
         </div>
 
         <script>
@@ -378,6 +400,62 @@
                     // Повторяем запрос через определенный интервал (например, 5 секунд)
                     setTimeout(startLongPolling, 500); // 5 секунд
                 }
+            }
+
+            // Функция для включения выбранных устройств
+            async function turnOnSelected() {
+                await changeSelectedDevices(1);
+            }
+
+            // Функция для выключения выбранных устройств
+            async function turnOffSelected() {
+                await changeSelectedDevices(0);
+            }
+
+            // Функция для изменения состояния выбранных устройств
+            async function changeSelectedDevices(newState) {
+                const table = document.getElementById("deviceTable");
+                const rows = table.getElementsByTagName("tbody")[0].getElementsByTagName("tr");
+                const promises = [];
+
+                for (let i = 0; i < rows.length; i++) {
+                    const row = rows[i];
+                    const checkbox = row.cells[3].querySelector(".status-checkbox");
+                    if (checkbox && checkbox.checked) {
+                        const ip = row.cells[1].getElementsByTagName("input")[0].value;
+                        const channel = parseInt(row.cells[2].getElementsByTagName("select")[0].value, 10) - 1;
+
+                        // Добавим обработку состояния кнопки "Проверка"
+                        const statusButton = row.cells[3].getElementsByTagName("button")[0];
+                        statusButton.textContent = "Обработка";
+                        statusButton.classList.remove("on", "off");
+                        statusButton.classList.add("processing");
+                        statusButton.disabled = true;
+
+                        promises.push(
+                            setChan(ip, channel, newState).then((res) => {
+                                if (res.status === "Success") {
+                                    statusButton.classList.remove("processing");
+                                    statusButton.classList.add(newState ? "on" : "off");
+                                    statusButton.textContent = newState ? "Работает" : "Выключено";
+                                    statusButton.disabled = false;
+                                    statusButton.dataset.updated = Date.now(); // Обновляем timestamp
+                                } else {
+                                    statusButton.textContent = "Ошибка";
+                                    console.error(
+                                        `Error calling setChan for ${ip}[${channel}] during bulk change:`,
+                                        res.error
+                                    );
+                                    statusButton.classList.remove("processing");
+                                    statusButton.disabled = false;
+                                }
+                            })
+                        );
+                    }
+                }
+
+                await Promise.all(promises);
+                //  После завершения всех запросов  - возможно, следует обновить отображение.
             }
 
             document.addEventListener("DOMContentLoaded", () => {
