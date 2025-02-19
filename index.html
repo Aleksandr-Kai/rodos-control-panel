@@ -112,6 +112,21 @@
             .bulk-control-button.off {
                 background-color: #f44336; /* Red */
             }
+
+            /* Styles for the preset controls */
+            .preset-controls {
+                margin-top: 20px;
+                text-align: center;
+            }
+
+            .preset-controls select,
+            .preset-controls button {
+                margin: 0 5px;
+                padding: 8px 12px;
+                border: 1px solid #ccc;
+                border-radius: 4px;
+                font-size: 14px;
+            }
         </style>
     </head>
     <body>
@@ -137,6 +152,17 @@
             <div class="bulk-control-buttons">
                 <button class="bulk-control-button on" onclick="turnOnSelected()">Включить выбранные</button>
                 <button class="bulk-control-button off" onclick="turnOffSelected()">Выключить выбранные</button>
+            </div>
+
+            <!-- Preset Controls -->
+            <div class="preset-controls">
+                <label for="presetSelect">Пресет:</label>
+                <select id="presetSelect" onchange="loadPreset()">
+                    <option value="">Выберите пресет</option>
+                    <!-- Presets will be loaded here -->
+                </select>
+                <button onclick="savePreset()">Сохранить пресет</button>
+                <button onclick="deletePreset()">Удалить пресет</button>
             </div>
         </div>
 
@@ -458,8 +484,102 @@
                 //  После завершения всех запросов  - возможно, следует обновить отображение.
             }
 
+            // --- PRESET FUNCTIONS ---
+
+            function savePreset() {
+                const presetName = prompt("Введите имя для пресета:");
+                if (!presetName) return; // Отмена сохранения
+
+                const table = document.getElementById("deviceTable");
+                const rows = table.getElementsByTagName("tbody")[0].getElementsByTagName("tr");
+                const presetData = {};
+
+                for (let i = 0; i < rows.length; i++) {
+                    const row = rows[i];
+                    const checkbox = row.cells[3].querySelector(".status-checkbox");
+                    if (checkbox) {
+                        presetData[i] = checkbox.checked; // Сохраняем состояние чекбокса
+                    }
+                }
+
+                // Get existing presets or initialize an empty object
+                let presets = JSON.parse(localStorage.getItem("presets")) || {};
+                presets[presetName] = presetData;
+                localStorage.setItem("presets", JSON.stringify(presets));
+
+                // Update the preset select options
+                updatePresetSelect();
+            }
+
+            function deletePreset() {
+                const presetSelect = document.getElementById("presetSelect");
+                const selectedPreset = presetSelect.value;
+
+                if (!selectedPreset) {
+                    alert("Выберите пресет для удаления.");
+                    return;
+                }
+
+                if (!confirm(`Удалить пресет "${selectedPreset}"?`)) {
+                    return;
+                }
+
+                let presets = JSON.parse(localStorage.getItem("presets")) || {};
+                delete presets[selectedPreset];
+                localStorage.setItem("presets", JSON.stringify(presets));
+
+                updatePresetSelect();
+            }
+
+            function loadPreset() {
+                const presetSelect = document.getElementById("presetSelect");
+                const selectedPreset = presetSelect.value;
+
+                if (!selectedPreset) {
+                    //  Если выбран пустой пункт, то просто ничего не делаем.
+                    return;
+                }
+
+                const presets = JSON.parse(localStorage.getItem("presets")) || {};
+                const presetData = presets[selectedPreset];
+
+                if (!presetData) {
+                    console.error("Preset data not found.");
+                    return;
+                }
+
+                const table = document.getElementById("deviceTable");
+                const rows = table.getElementsByTagName("tbody")[0].getElementsByTagName("tr");
+
+                for (let i = 0; i < rows.length; i++) {
+                    const row = rows[i];
+                    const checkbox = row.cells[3].querySelector(".status-checkbox");
+                    if (checkbox && presetData.hasOwnProperty(i)) {
+                        checkbox.checked = presetData[i]; // Восстанавливаем состояние чекбокса
+                    }
+                }
+                saveTableData(); // Сохраняем состояния после загрузки пресета.
+            }
+
+            function updatePresetSelect() {
+                const presetSelect = document.getElementById("presetSelect");
+                // Clear existing options
+                presetSelect.innerHTML = '<option value="">Выберите пресет</option>';
+
+                const presets = JSON.parse(localStorage.getItem("presets")) || {};
+                for (const presetName in presets) {
+                    if (presets.hasOwnProperty(presetName)) {
+                        const option = document.createElement("option");
+                        option.value = presetName;
+                        option.text = presetName;
+                        presetSelect.appendChild(option);
+                    }
+                }
+            }
+
             document.addEventListener("DOMContentLoaded", () => {
                 loadTableData();
+                updatePresetSelect(); // Load presets on page load
                 // Запускаем Long Polling после загрузки таблицы
                 startLongPolling();
             });
