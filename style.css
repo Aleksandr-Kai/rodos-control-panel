@@ -1,0 +1,122 @@
+.wrapper {
+    width: 1024px;
+    min-height: 100vh;
+    margin: 0 auto;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+}
+
+th,
+td {
+    border: 1px solid #ccc;
+    padding: 8px;
+    text-align: left;
+}
+
+th {
+    background-color: #f0f0f0;
+}
+
+.channel-select {
+    width: 60px;
+}
+
+.status-button {
+    padding: 5px;
+    width: 80px; /* Увеличили ширину, чтобы уместить "Обработка" */
+    height: 30px;
+    border: none;
+    cursor: pointer;
+    color: white;
+    text-align: center;
+    line-height: 20px;
+}
+
+.status-button.on {
+    background-color: red;
+}
+
+.status-button.off {
+    background-color: gray;
+}
+
+.status-button.processing {
+    background-color: #ffc107; /* Желтый для обработки */
+    cursor: default;
+}
+
+.delete-button {
+    background-color: #f44336;
+    color: white;
+    padding: 5px 10px;
+    border: none;
+    cursor: pointer;
+}
+
+.add-row-button {
+    margin-top: 10px;
+    padding: 10px 20px;
+    background-color: #4caf50;
+    color: white;
+    border: none;
+    cursor: pointer;
+}
+
+/* Стиль для чекбокса */
+.status-checkbox {
+    vertical-align: middle; /* Выравниваем по вертикали с кнопкой */
+    margin-left: 10px; /* Отступ от кнопки */
+    height: 24px; /* Высота как у кнопки (примерно) */
+    width: 24px; /* Ширина чекбокса */
+    cursor: pointer;
+    margin-right: 0; /* Убираем отступ справа */
+}
+
+/*  Добавлено:  */
+.status-cell {
+    display: flex;
+    align-items: center; /* Выравниваем элементы по вертикали */
+    justify-content: space-around; /* Прижимаем элементы к левому краю */
+}
+
+/* Styles for the "Turn On/Off Selected" buttons */
+.bulk-control-buttons {
+    margin-top: 20px;
+    text-align: center;
+}
+
+.bulk-control-button {
+    padding: 10px 20px;
+    border: none;
+    cursor: pointer;
+    color: white;
+    border-radius: 5px;
+    margin: 0 10px;
+}
+
+.bulk-control-button.on {
+    background-color: #4caf50; /* Green */
+}
+
+.bulk-control-button.off {
+    background-color: #f44336; /* Red */
+}
+
+/* Styles for the preset controls */
+.preset-controls {
+    margin-top: 20px;
+    text-align: center;
+}
+
+.preset-controls select,
+.preset-controls button {
+    margin: 0 5px;
+    padding: 8px 12px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 14px;
+}

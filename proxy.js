@@ -105,11 +105,16 @@ app.get("/status", async (req, res) => {
 });
 
 app.get("/", (req, res) => {
+    console.log(__dirname);
     res.sendFile("index.html", { root: __dirname });
 });
 
-app.get("/mchp.js", (req, res) => {
-    res.sendFile("mchp.js", { root: __dirname });
+app.get("/script.js", (req, res) => {
+    res.sendFile("script.js", { root: __dirname });
+});
+
+app.get("/style.css", (req, res) => {
+    res.sendFile("style.css", { root: __dirname });
 });
 
 // Функция для выполнения HTTP-запроса
