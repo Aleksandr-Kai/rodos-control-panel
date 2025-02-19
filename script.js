@@ -1,5 +1,14 @@
 const proxyhost = "localhost:3000";
-let authToken = null; //  Переменная для хранения токена
+let authToken = null;
+
+// Default credentials
+const defaultLogin = "admin";
+const defaultPassword = "admin";
+
+function setLoginAndPassword(login, password) {
+    document.getElementById("login").value = login;
+    document.getElementById("password").value = password;
+}
 
 // Function to update authorization token
 function updateAuthToken() {
@@ -7,31 +16,38 @@ function updateAuthToken() {
     const password = document.getElementById("password").value;
 
     // Basic authentication (replace with your actual authentication logic)
-    const credentials = `${login}:${password}`;
-    const encodedCredentials = btoa(credentials);
-    authToken = `Basic ${encodedCredentials}`; // Set the token
-
-    console.log("Auth token updated:", authToken);
+    if (login && password) {
+        const credentials = `${login}:${password}`;
+        const encodedCredentials = btoa(credentials);
+        authToken = `Basic ${encodedCredentials}`;
+        console.log("Auth token updated:", authToken);
+        // Save credentials to localStorage
+        localStorage.setItem("login", login);
+        localStorage.setItem("password", password);
+    } else {
+        authToken = null;
+        console.log("Auth token cleared");
+    }
 }
 
 async function setChan(ip, chan, state) {
     if (!authToken) {
         console.error("Authorization token not set.");
-        alert("Пожалуйста, введите логин и пароль и обновите токен.");
-        return { status: "Error", error: "Not authorized" }; //  Важно:  Возвращаем ошибку
+        alert("Пожалуйста, введите логин и пароль.");
+        return { status: "Error", error: "Not authorized" };
     }
 
     return fetch(`http://${proxyhost}/setChan`, {
         method: "POST",
         headers: {
             "Content-Type": "application/json",
-            Authorization: authToken, //  Добавляем заголовок авторизации
+            Authorization: authToken,
         },
         body: JSON.stringify({ ip, chan, state }),
     }).then((resp) => {
         if (!resp.ok) {
             console.error("setChan failed:", resp.status, resp.statusText);
-            return { status: "Error", error: `HTTP error ${resp.status}` }; //  Обрабатываем ошибки
+            return { status: "Error", error: `HTTP error ${resp.status}` };
         }
         return resp.json();
     });
@@ -459,9 +475,20 @@ function updatePresetSelect() {
 }
 
 document.addEventListener("DOMContentLoaded", () => {
+    // Load saved credentials from localStorage
+    const savedLogin = localStorage.getItem("login");
+    const savedPassword = localStorage.getItem("password");
+
+    if (savedLogin && savedPassword) {
+        setLoginAndPassword(savedLogin, savedPassword);
+    } else {
+        // Set default credentials if no credentials are saved
+        setLoginAndPassword(defaultLogin, defaultPassword);
+        // Update and save the token with the default credentials
+        updateAuthToken(); // This also saves to localStorage
+    }
+
     loadTableData();
-    updatePresetSelect(); // Load presets on page load
-    // Запускаем Long Polling после загрузки таблицы
+    updatePresetSelect();
     startLongPolling();
-    updateAuthToken(); //  Обновляем токен при загрузке страницы (по желанию)
 });

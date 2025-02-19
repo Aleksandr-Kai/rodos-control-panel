@@ -5,16 +5,38 @@
         <title>RODOS-12</title>
         <script src="/mchp.js" type="text/javascript"></script>
         <link rel="stylesheet" href="style.css" />
+        <style>
+            /* Добавляем стили для модальной формы авторизации */
+            .login-form {
+                display: none; /* Скрываем форму по умолчанию */
+                position: fixed; /* Позиционируем форму относительно окна */
+                top: 50%; /* Отступ сверху, чтобы форма центрировалась */
+                left: 50%; /* Отступ слева, чтобы форма центрировалась */
+                transform: translate(-50%, -50%); /* Выводим форму в центр окна */
+                background-color: #fff; /* Фоновый цвет формы */
+                padding: 20px; /* Полярка вокруг контента */
+                border-radius: 10px; /* Круглый угол формы */
+                box-shadow: 0 0 10px rgba(0, 0, 0, 0.2); /* Тень формы */
+                z-index: 1000; /* Отображение над другими элементами */
+            }
+
+            .login-form input {
+                margin-bottom: 10px;
+            }
+        </style>
     </head>
     <body>
         <div class="wrapper">
+            <a id="authorise-btn" href="#" onclick="toggleLoginForm()">Авторизация</a>
+
             <div class="login-form">
                 <label for="login">Логин:</label>
-                <input type="text" id="login" value="admin" /><br /><br />
+                <input type="text" id="login" /><br />
                 <label for="password">Пароль:</label>
-                <input type="password" id="password" value="admin" /><br /><br />
-                <button onclick="updateAuthToken()">Применить</button>
+                <input type="password" id="password" /><br />
+                <button onclick="login()">Принять</button>
             </div>
+
             <h1>Управление устройствами</h1>
             <button class="add-row-button" onclick="addRow()">Добавить устройство</button>
             <table id="deviceTable">
@@ -51,5 +73,27 @@
         </div>
 
         <script src="script.js"></script>
+        <script>
+            // Добавляем функцию для показа/скрытия формы
+            function toggleLoginForm() {
+                const loginForm = document.querySelector(".login-form");
+                loginForm.style.display = loginForm.style.display === "block" ? "none" : "block";
+            }
+
+            // Добавляем функцию для "аутентификации" (сохранение данных)
+            function login() {
+                const loginForm = document.querySelector(".login-form");
+                const loginInput = document.querySelector("#login");
+                const passwordInput = document.querySelector("#password");
+
+                // Сохраняем данные в localStorage (вместо отправки на сервер)
+                localStorage.setItem("login", loginInput.value);
+                localStorage.setItem("password", passwordInput.value);
+
+                updateAuthToken(); // Обновляем "токен"
+
+                toggleLoginForm(); // Закрываем форму
+            }
+        </script>
     </body>
 </html>
