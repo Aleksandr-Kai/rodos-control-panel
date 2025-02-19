@@ -1,13 +1,40 @@
 const proxyhost = "localhost:3000";
+let authToken = null; //  Переменная для хранения токена
+
+// Function to update authorization token
+function updateAuthToken() {
+    const login = document.getElementById("login").value;
+    const password = document.getElementById("password").value;
+
+    // Basic authentication (replace with your actual authentication logic)
+    const credentials = `${login}:${password}`;
+    const encodedCredentials = btoa(credentials);
+    authToken = `Basic ${encodedCredentials}`; // Set the token
+
+    console.log("Auth token updated:", authToken);
+}
 
 async function setChan(ip, chan, state) {
+    if (!authToken) {
+        console.error("Authorization token not set.");
+        alert("Пожалуйста, введите логин и пароль и обновите токен.");
+        return { status: "Error", error: "Not authorized" }; //  Важно:  Возвращаем ошибку
+    }
+
     return fetch(`http://${proxyhost}/setChan`, {
         method: "POST",
         headers: {
             "Content-Type": "application/json",
+            Authorization: authToken, //  Добавляем заголовок авторизации
         },
         body: JSON.stringify({ ip, chan, state }),
-    }).then((resp) => resp.json());
+    }).then((resp) => {
+        if (!resp.ok) {
+            console.error("setChan failed:", resp.status, resp.statusText);
+            return { status: "Error", error: `HTTP error ${resp.status}` }; //  Обрабатываем ошибки
+        }
+        return resp.json();
+    });
 }
 
 async function getRel(ips) {
@@ -436,4 +463,5 @@ document.addEventListener("DOMContentLoaded", () => {
     updatePresetSelect(); // Load presets on page load
     // Запускаем Long Polling после загрузки таблицы
     startLongPolling();
+    updateAuthToken(); //  Обновляем токен при загрузке страницы (по желанию)
 });

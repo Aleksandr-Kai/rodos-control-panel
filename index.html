@@ -8,6 +8,13 @@
     </head>
     <body>
         <div class="wrapper">
+            <div class="login-form">
+                <label for="login">Логин:</label>
+                <input type="text" id="login" value="admin" /><br /><br />
+                <label for="password">Пароль:</label>
+                <input type="password" id="password" value="admin" /><br /><br />
+                <button onclick="updateAuthToken()">Применить</button>
+            </div>
             <h1>Управление устройствами</h1>
             <button class="add-row-button" onclick="addRow()">Добавить устройство</button>
             <table id="deviceTable">

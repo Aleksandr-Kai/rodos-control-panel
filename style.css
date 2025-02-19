@@ -120,3 +120,22 @@ th {
     border-radius: 4px;
     font-size: 14px;
 }
+
+.login-form {
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+.login-form label {
+    display: inline-block; /* Располагаем label и input в строку */
+    width: 80px; /* Ширина label */
+    text-align: right;
+    margin-right: 10px;
+}
+
+.login-form input[type="text"],
+.login-form input[type="password"] {
+    padding: 5px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+}
