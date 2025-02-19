@@ -3,7 +3,6 @@
     <head>
         <meta http-equiv="Content-Type" content="text/html; charset=windows-1251" />
         <title>RODOS-12</title>
-        <script src="/mchp.js" type="text/javascript"></script>
         <link rel="stylesheet" href="style.css" />
         <style>
             /* Добавляем стили для модальной формы авторизации */
@@ -73,27 +72,5 @@
         </div>
 
         <script src="script.js"></script>
-        <script>
-            // Добавляем функцию для показа/скрытия формы
-            function toggleLoginForm() {
-                const loginForm = document.querySelector(".login-form");
-                loginForm.style.display = loginForm.style.display === "block" ? "none" : "block";
-            }
-
-            // Добавляем функцию для "аутентификации" (сохранение данных)
-            function login() {
-                const loginForm = document.querySelector(".login-form");
-                const loginInput = document.querySelector("#login");
-                const passwordInput = document.querySelector("#password");
-
-                // Сохраняем данные в localStorage (вместо отправки на сервер)
-                localStorage.setItem("login", loginInput.value);
-                localStorage.setItem("password", passwordInput.value);
-
-                updateAuthToken(); // Обновляем "токен"
-
-                toggleLoginForm(); // Закрываем форму
-            }
-        </script>
     </body>
 </html>

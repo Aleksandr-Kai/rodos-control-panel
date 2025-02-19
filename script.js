@@ -490,5 +490,26 @@ document.addEventListener("DOMContentLoaded", () => {
 
     loadTableData();
     updatePresetSelect();
+    updateAuthToken();
     startLongPolling();
 });
+
+// Добавляем функцию для показа/скрытия формы
+function toggleLoginForm() {
+    const loginForm = document.querySelector(".login-form");
+    loginForm.style.display = loginForm.style.display === "block" ? "none" : "block";
+}
+
+// Добавляем функцию для "аутентификации" (сохранение данных)
+function login() {
+    const loginInput = document.querySelector("#login");
+    const passwordInput = document.querySelector("#password");
+
+    // Сохраняем данные в localStorage (вместо отправки на сервер)
+    localStorage.setItem("login", loginInput.value);
+    localStorage.setItem("password", passwordInput.value);
+
+    updateAuthToken(); // Обновляем "токен"
+
+    toggleLoginForm(); // Закрываем форму
+}
