@@ -25,6 +25,12 @@ th {
     width: 60px;
 }
 
+@keyframes blinker {
+    50% {
+        background-color: #ffffff; /* Цвет фона в середине анимации */
+    }
+}
+
 .status-button {
     padding: 5px;
     width: 80px; /* Увеличили ширину, чтобы уместить "Обработка" */
@@ -34,18 +40,23 @@ th {
     color: white;
     text-align: center;
     line-height: 20px;
+    background-color: rgb(255, 0, 0);
+    animation: blinker 1s linear infinite;
 }
 
 .status-button.on {
-    background-color: red;
+    background-color: rgb(192, 0, 0);
+    animation: none;
 }
 
 .status-button.off {
     background-color: gray;
+    animation: none;
 }
 
 .status-button.processing {
     background-color: #ffc107; /* Желтый для обработки */
+    animation: none;
     cursor: default;
 }
 
@@ -110,6 +121,11 @@ th {
 .preset-controls {
     margin-top: 20px;
     text-align: center;
+    opacity: 0.1;
+}
+
+.preset-controls:hover {
+    opacity: 1;
 }
 
 .preset-controls select,

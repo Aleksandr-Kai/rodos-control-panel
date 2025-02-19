@@ -413,11 +413,11 @@ function deletePreset() {
     const selectedPreset = presetSelect.value;
 
     if (!selectedPreset) {
-        alert("Выберите пресет для удаления.");
+        alert("Выберите группу для удаления.");
         return;
     }
 
-    if (!confirm(`Удалить пресет "${selectedPreset}"?`)) {
+    if (!confirm(`Удалить группу "${selectedPreset}"?`)) {
         return;
     }
 
@@ -461,7 +461,7 @@ function loadPreset() {
 function updatePresetSelect() {
     const presetSelect = document.getElementById("presetSelect");
     // Clear existing options
-    presetSelect.innerHTML = '<option value="">Выберите пресет</option>';
+    presetSelect.innerHTML = '<option value="">Выберите группу</option>';
 
     const presets = JSON.parse(localStorage.getItem("presets")) || {};
     for (const presetName in presets) {

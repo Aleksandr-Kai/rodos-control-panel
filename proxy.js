@@ -144,11 +144,14 @@ function makeHttpRequest(targetIp, path, auth = "Basic YWRtaW46YWRtaW4=") {
                     reject(new Error(`HTTP error! Status: ${res.statusCode}`));
                 }
             });
+            res.setTimeout(5000, () => reject("timeout"));
         });
 
         req.on("error", (error) => {
             reject(error);
         });
+
+        req.setTimeout(5000, () => reject("timeout"));
 
         req.end();
     });
