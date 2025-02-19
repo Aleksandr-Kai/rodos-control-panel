@@ -156,8 +156,8 @@
                 const statusCell = document.createElement("td");
                 const statusButton = document.createElement("button");
                 statusButton.className = "status-button";
-                statusButton.textContent = status === "on" ? "Работает" : "Выключено";
-                statusButton.classList.add(status);
+                statusButton.textContent = "Проверка";
+                // statusButton.disabled = true;
 
                 statusButton.addEventListener("click", async () => {
                     const ip = row.cells[1].getElementsByTagName("input")[0].value;
@@ -176,33 +176,20 @@
                     statusButton.classList.add("processing");
                     statusButton.disabled = true; // Отключаем кнопку, пока обрабатывается запрос
 
-                    try {
-                        // 4. Вызываем setRel
-                        const setRelResult = await setRel(ip, allChannelsStates);
-
-                        if (setRelResult[channel].status === "Success") {
-                            console.log(`setRel success for ${ip}:`, allChannelsStates);
-                            statusButton.classList.add("updating");
-                        } else {
-                            console.error(`setRel failed for ${ip}:`, setRelResult.message || "Unknown error");
-                            // Обработка ошибки.  Оставляем кнопку в состоянии, которое было до нажатия.
-                            //  Обновляем класс кнопки, чтобы показать, что произошла ошибка, используя текущее (неизменное) состояние кнопки
-                            const currentStatus = statusButton.classList.contains("on") ? "on" : "off"; // Сохраняем текущий класс (on или off)
+                    setChan(ip, channel, newState)
+                        .then((res) => {
                             statusButton.classList.remove("processing");
-                            statusButton.classList.add(currentStatus);
-                            statusButton.textContent = currentStatus === "on" ? "Работает" : "Выключено";
-                        }
-                    } catch (error) {
-                        console.error(`Error calling setRel for ${ip}:`, error);
-                        // Обработка ошибки сети.  Оставляем кнопку в состоянии, которое было до нажатия.
-                        //  Обновляем класс кнопки, чтобы показать, что произошла ошибка, используя текущее (неизменное) состояние кнопки
-                        const currentStatus = statusButton.classList.contains("on") ? "on" : "off"; // Сохраняем текущий класс (on или off)
-                        statusButton.classList.remove("processing");
-                        statusButton.classList.add(currentStatus);
-                        statusButton.textContent = currentStatus === "on" ? "Работает" : "Выключено";
-                    } finally {
-                        statusButton.disabled = false; // Включаем кнопку всегда, после завершения запроса (успех или ошибка)
-                    }
+                            if (res.status === "Success") {
+                                statusButton.classList.add(newState ? "on" : "off");
+                                statusButton.textContent = newState ? "Работает" : "Выключено";
+                            } else {
+                                statusButton.textContent = "Ошибка";
+                                console.error(`Error calling setChan for ${ip}[${channel}]:`, res.error);
+                            }
+                            statusButton.disabled = false;
+                            statusButton.dataset.updated = Date.now();
+                        })
+                        .catch((err) => console.log(err));
                 });
                 statusCell.appendChild(statusButton);
                 row.appendChild(statusCell);
@@ -283,7 +270,7 @@
             }
 
             // Функция для обновления состояния кнопок на основе данных getRel
-            function updateStatusButtons(results) {
+            function updateStatusButtons(results, timestamp) {
                 const table = document.getElementById("deviceTable");
                 const rows = table.getElementsByTagName("tbody")[0].getElementsByTagName("tr");
 
@@ -292,7 +279,7 @@
                     const ip = row.cells[1].getElementsByTagName("input")[0].value;
                     const statusButton = row.cells[3].getElementsByTagName("button")[0];
 
-                    if (statusButton.classList.contains("processing") && !statusButton.classList.contains("updating")) {
+                    if (statusButton.classList.contains("processing") || timestamp < statusButton.dataset.updated) {
                         // Если кнопка в состоянии "Обработка", пропускаем ее обновление от getRel
                         continue;
                     }
@@ -311,16 +298,15 @@
                             (channelState === 1 && !statusButton.classList.contains("on")) ||
                             (channelState === 0 && !statusButton.classList.contains("off"))
                         ) {
-                            statusButton.classList.remove("on", "off", "processing", "updating");
+                            statusButton.classList.remove("on", "off");
                             statusButton.classList.add(channelState === 1 ? "on" : "off");
                             statusButton.textContent = channelState === 1 ? "Работает" : "Выключено";
                         }
                     } else {
                         // Обработка ошибок или недоступности устройства.
                         //  Например:  сделать кнопку серой и отключить ее, или отобразить сообщение об ошибке.
-                        statusButton.classList.remove("on", "off", "processing");
-                        statusButton.classList.add("off"); // По умолчанию делаем выключенной
-                        statusButton.textContent = "Выключено"; //  Удаляем "(Ошибка)" - состояние кнопки теперь определяется только getRel
+                        statusButton.classList.remove("on", "off");
+                        statusButton.textContent = "Ошибка"; //  Удаляем "(Ошибка)" - состояние кнопки теперь определяется только getRel
                     }
                 }
             }
@@ -343,8 +329,9 @@
                 }
 
                 try {
+                    const timestamp = Date.now();
                     const results = await getRel(ips);
-                    updateStatusButtons(results);
+                    updateStatusButtons(results, timestamp);
                 } catch (error) {
                     console.error("Ошибка при вызове getRel:", error);
                     //  Обработка ошибок.  Например:  отобразить сообщение об ошибке, остановить long polling,

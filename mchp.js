@@ -1,3 +1,4 @@
+const proxyhost = "localhost:3000";
 async function setRel(ip, states) {
     const params = states.map((state, index) => {
         return { ip: ip, chan: index, state: Boolean(state) }; // Создаем массив объектов с ip и состоянием
@@ -19,6 +20,16 @@ async function setRel(ip, states) {
         console.error("Ошибка при отправке запроса:", error);
         throw error;
     }
+}
+
+async function setChan(ip, chan, state) {
+    return fetch(`http://${proxyhost}/setChan`, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ ip, chan, state }),
+    }).then((resp) => resp.json());
 }
 
 async function getRel(ips) {

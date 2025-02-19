@@ -25,20 +25,6 @@ function xmlToArray(xmlString) {
 
 app.use(express.json()); // Для парсинга JSON-тела запроса
 
-const setChan = async (ip, chan, state, auth) => {
-    try {
-        // Формируем URL для изменения состояния
-        const targetIp = `${ip}:80`;
-        const path = `/protect/rb${chan}${state ? "n" : "f"}.cgi`;
-
-        // Выполняем HTTP-запрос
-        const result = await makeHttpRequest(targetIp, path, auth);
-        return { ip, status: "Success", response: result };
-    } catch (error) {
-        return { ip, status: "Error", error: error.message };
-    }
-};
-
 // Обработчик POST-запроса на /set
 app.post("/set", async (req, res) => {
     const devices = req.body; // Массив объектов {ip, chan, state}
@@ -69,6 +55,25 @@ app.post("/set", async (req, res) => {
 
     // Возвращаем результаты
     res.json(results);
+});
+
+app.post("/setChan", async (req, res) => {
+    const auth = req.headers.authorization;
+
+    const { ip, chan, state } = req.body;
+
+    // Формируем URL для изменения состояния
+    const targetIp = `${ip}:80`;
+    const path = `/protect/rb${chan}${Boolean(state) ? "n" : "f"}.cgi`;
+
+    // Выполняем HTTP-запрос
+    makeHttpRequest(targetIp, path, auth)
+        .then((result) => {
+            res.json({ ip, status: "Success", response: result });
+        })
+        .catch((err) => {
+            res.json({ ip, status: "Error", error: err.message });
+        });
 });
 
 app.get("/status", async (req, res) => {
