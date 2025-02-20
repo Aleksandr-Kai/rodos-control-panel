@@ -1,78 +1,3 @@
-const proxyhost = "localhost:3000";
-let authToken = null;
-
-// Default credentials
-const defaultLogin = "admin";
-const defaultPassword = "admin";
-
-function setLoginAndPassword(login, password) {
-    document.getElementById("login").value = login;
-    document.getElementById("password").value = password;
-}
-
-// Function to update authorization token
-function updateAuthToken() {
-    const login = document.getElementById("login").value;
-    const password = document.getElementById("password").value;
-
-    // Basic authentication (replace with your actual authentication logic)
-    if (login && password) {
-        const credentials = `${login}:${password}`;
-        const encodedCredentials = btoa(credentials);
-        authToken = `Basic ${encodedCredentials}`;
-        console.log("Auth token updated:", authToken);
-        // Save credentials to localStorage
-        localStorage.setItem("login", login);
-        localStorage.setItem("password", password);
-    } else {
-        authToken = null;
-        console.log("Auth token cleared");
-    }
-}
-
-async function setChan(ip, chan, state) {
-    if (!authToken) {
-        console.error("Authorization token not set.");
-        alert("Пожалуйста, введите логин и пароль.");
-        return { status: "Error", error: "Not authorized" };
-    }
-
-    return fetch(`http://${proxyhost}/setChan`, {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json",
-            Authorization: authToken,
-        },
-        body: JSON.stringify({ ip, chan, state }),
-    }).then((resp) => {
-        if (!resp.ok) {
-            console.error("setChan failed:", resp.status, resp.statusText);
-            return { status: "Error", error: `HTTP error ${resp.status}` };
-        }
-        return resp.json();
-    });
-}
-
-async function getRel(ips) {
-    try {
-        // Преобразование массива IP в формат для URL
-        const url = `http://localhost:3000/status?${ips.map((ip) => `ip[]=${ip}`).join("&")}`;
-
-        const response = await fetch(url, {
-            method: "GET",
-        });
-
-        if (!response.ok) {
-            throw new Error(`HTTP error! Status: ${response.status}`);
-        }
-
-        return await response.json();
-    } catch (error) {
-        console.error("Ошибка при получении статуса:", error);
-        throw error;
-    }
-}
-
 function isValidIP(ip) {
     if (!ip) return false;
     const parts = ip.split(".");
@@ -148,7 +73,7 @@ function createTableRow(deviceName = "", ipAddress = "", channel = 1, status = "
         statusButton.classList.add("processing");
         statusButton.disabled = true;
 
-        setChan(ip, channel, newState)
+        setChanNoSecure(ip, channel, newState)
             .then((res) => {
                 statusButton.classList.remove("processing");
                 if (res.status === "Success") {
@@ -316,7 +241,8 @@ async function startLongPolling() {
 
     try {
         const timestamp = Date.now();
-        const results = await getRel(ips);
+        const results = await getRelNoSecure(ips);
+        // const results = await getRel(ips);
         updateStatusButtons(results, timestamp);
     } catch (error) {
         console.error("Ошибка при вызове getRel:", error);
@@ -359,7 +285,7 @@ async function changeSelectedDevices(newState) {
             statusButton.disabled = true;
 
             promises.push(
-                setChan(ip, channel, newState).then((res) => {
+                setChanNoSecure(ip, channel, newState).then((res) => {
                     if (res.status === "Success") {
                         statusButton.classList.remove("processing");
                         statusButton.classList.add(newState ? "on" : "off");
@@ -475,22 +401,8 @@ function updatePresetSelect() {
 }
 
 document.addEventListener("DOMContentLoaded", () => {
-    // Load saved credentials from localStorage
-    const savedLogin = localStorage.getItem("login");
-    const savedPassword = localStorage.getItem("password");
-
-    if (savedLogin && savedPassword) {
-        setLoginAndPassword(savedLogin, savedPassword);
-    } else {
-        // Set default credentials if no credentials are saved
-        setLoginAndPassword(defaultLogin, defaultPassword);
-        // Update and save the token with the default credentials
-        updateAuthToken(); // This also saves to localStorage
-    }
-
     loadTableData();
     updatePresetSelect();
-    updateAuthToken();
     startLongPolling();
 });
 
@@ -512,4 +424,53 @@ function login() {
     updateAuthToken(); // Обновляем "токен"
 
     toggleLoginForm(); // Закрываем форму
+}
+
+async function setChanNoSecure(ip, chan, state) {
+    const path = `http://${ip}/rb${chan}${state ? "n" : "f"}.cgi`;
+    return fetch(path)
+        .then((resp) => resp.text())
+        .then((resp) => ({ status: resp }))
+        .catch((err) => ({ status: "Error", response: err.message }));
+}
+
+function xmlToArray(xmlString) {
+    // Создаем объект DOMParser
+    const parser = new DOMParser();
+    // Парсим строку XML в документ
+    const xmlDoc = parser.parseFromString(xmlString, "text/xml");
+
+    const result = Array(8).fill(0); // Инициализируем массив с 0
+
+    for (let i = 0; i < result.length; i++) {
+        // Формируем нужный тег для поиска
+        const tagName = `rl${i}string`;
+        const element = xmlDoc.getElementsByTagName(tagName)[0];
+
+        // Проверяем, существует ли элемент и извлекаем значение, если это так
+        if (element) {
+            const value = parseInt(element.textContent, 10);
+            result[i] = isNaN(value) ? 0 : value; // Устанавливаем значение или 0, если NaN
+        }
+    }
+
+    return result;
+}
+
+async function getRelNoSecure(ips) {
+    try {
+        const promises = ips.map(async (ip) => {
+            const url = `http://${ip}/pstat.xml`;
+            return fetch(url, { method: "GET" })
+                .then((resp) => resp.text())
+                .then((resp) => ({ ip, status: "Success", response: xmlToArray(resp) }));
+        });
+
+        // Ожидаем выполнения всех промисов
+        const results = await Promise.all(promises);
+        return results; // Можно вернуть все результаты, если это нужно
+    } catch (error) {
+        console.error("Ошибка при получении статуса:", error);
+        throw error;
+    }
 }
