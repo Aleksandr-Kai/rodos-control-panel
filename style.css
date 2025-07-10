@@ -121,11 +121,6 @@ th {
 .preset-controls {
     margin-top: 20px;
     text-align: center;
-    opacity: 0.1;
-}
-
-.preset-controls:hover {
-    opacity: 1;
 }
 
 .preset-controls select,
