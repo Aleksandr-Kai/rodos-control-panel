@@ -4,6 +4,71 @@
     margin: 0 auto;
 }
 
+.layout {
+    display: flex;
+    flex-direction: row;
+    gap: 10px;
+    margin-top: 10px;
+}
+
+.list-title {
+    border-bottom: 1px solid rgb(170, 170, 170);
+}
+
+.group-list {
+    width: 15%;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    border-right: 1px solid rgb(170, 170, 170);
+    padding: 0 5px;
+    user-select: none;
+}
+
+.group-item {
+    padding: 0 5px;
+    font-size: large;
+    cursor: pointer;
+    border-radius: 5px;
+    background: rgba(0, 0, 0, 0.055);
+
+    display: flex;
+    gap: 5px;
+    justify-content: space-between;
+}
+
+.group-item-name span {
+    /* background-clip: text; */
+    background-color: rgba(255, 255, 255, 0.726);
+}
+
+/* .group-item:last-child {
+    display: block;
+    border-top: 1px solid black;
+    opacity: 0.3;
+    text-align: center;
+} */
+
+.group-item-name {
+    width: 100%;
+}
+
+.group-item-btn {
+    font-size: 0.7em;
+    padding: 0 5px;
+    opacity: 0.2;
+}
+
+.group-item-btn:hover {
+    color: rgb(182, 0, 0);
+    opacity: 1;
+}
+
+.group-item:hover {
+    outline: 1px dashed #333;
+    opacity: 1;
+}
+
 table {
     width: 100%;
     border-collapse: collapse;
@@ -77,6 +142,15 @@ th {
     cursor: pointer;
 }
 
+.add-group-button {
+    margin-top: 10px;
+    padding: 10px 20px;
+    background-color: #ec8b2f;
+    color: white;
+    border: none;
+    cursor: pointer;
+}
+
 /* Стиль для чекбокса */
 .status-checkbox {
     vertical-align: middle; /* Выравниваем по вертикали с кнопкой */
@@ -121,6 +195,7 @@ th {
 .preset-controls {
     margin-top: 20px;
     text-align: center;
+    visibility: hidden;
 }
 
 .preset-controls select,
@@ -167,4 +242,34 @@ th {
 
 .login-form input {
     margin-bottom: 10px;
+}
+
+.params-save-load {
+    cursor: pointer;
+    display: block;
+    /* background-color: #4caf50; */
+    padding: 5px;
+    box-shadow: inset 0 0 5px black;
+    border-radius: 5px;
+    opacity: 0.8;
+}
+
+.load-block {
+    display: flex;
+    width: 50%;
+    justify-content: space-between;
+}
+
+.save-block {
+    display: flex;
+    gap: 10px;
+}
+
+.save-load-block {
+    opacity: 0.5;
+    margin-top: 30px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    align-items: center;
 }

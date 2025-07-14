@@ -17,38 +17,62 @@
                 <button onclick="login()">Принять</button>
             </div>
 
-            <h1>Управление устройствами</h1>
-            <button class="add-row-button" onclick="addRow()">Добавить устройство</button>
-            <table id="deviceTable">
-                <thead>
-                    <tr>
-                        <th>Имя устройства</th>
-                        <th>IP</th>
-                        <th>Канал</th>
-                        <th>Состояние</th>
-                        <th></th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <!-- Строки таблицы будут добавлены динамически -->
-                </tbody>
-            </table>
+            <div class="layout">
+                <div class="group-list">
+                    <h1 class="list-title">Группы</h1>
+                </div>
 
-            <!-- Buttons for bulk control -->
-            <div class="bulk-control-buttons">
-                <button class="bulk-control-button on" onclick="turnOnSelected()">Включить выбранные</button>
-                <button class="bulk-control-button off" onclick="turnOffSelected()">Выключить выбранные</button>
+                <div class="dev-list">
+                    <h1>Управление устройствами</h1>
+                    <button class="add-row-button" onclick="addRow()">Добавить устройство</button>
+                    <button class="add-group-button" onclick="savePreset()">Сохранить группу</button>
+                    <input type="color" id="groupColor" value="#ff0000" />
+                    <table id="deviceTable">
+                        <thead>
+                            <tr>
+                                <th>Имя устройства</th>
+                                <th>IP</th>
+                                <th>Канал</th>
+                                <th>Состояние</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- Строки таблицы будут добавлены динамически -->
+                        </tbody>
+                    </table>
+
+                    <!-- Buttons for bulk control -->
+                    <div class="bulk-control-buttons">
+                        <button class="bulk-control-button on" onclick="turnOnSelected()">Включить выбранные</button>
+                        <button class="bulk-control-button off" onclick="turnOffSelected()">Выключить выбранные</button>
+                    </div>
+
+                    <!-- Preset Controls -->
+                    <div class="preset-controls">
+                        <label for="presetSelect">Группы устройств:</label>
+                        <select id="presetSelect" onchange="loadPreset()">
+                            <option value="">Выберите группу</option>
+                            <!-- Presets will be loaded here -->
+                        </select>
+                        <button onclick="savePreset()">Сохранить группу</button>
+                        <button onclick="deletePreset()">Удалить группу</button>
+                    </div>
+                </div>
             </div>
-
-            <!-- Preset Controls -->
-            <div class="preset-controls">
-                <label for="presetSelect">Группы устройств:</label>
-                <select id="presetSelect" onchange="loadPreset()">
-                    <option value="">Выберите группу</option>
-                    <!-- Presets will be loaded here -->
-                </select>
-                <button onclick="savePreset()">Сохранить группу</button>
-                <button onclick="deletePreset()">Удалить группу</button>
+            <div class="save-load-block">
+                <div class="load-block">
+                    <div>Загрузить устройства из файла</div>
+                    <input type="file" id="fileInput" onchange="loadParams('fileInput')" />
+                </div>
+                <div class="load-block">
+                    <div>Загрузить группы из файла</div>
+                    <input type="file" id="fileInputGroup" onchange="loadParams('fileInputGroup')" />
+                </div>
+                <div class="save-block">
+                    <div class="params-save-load" onclick="saveParams('dev')">Сохранить устройства в файл</div>
+                    <div class="params-save-load" onclick="saveParams('grp')">Сохранить группы в файл</div>
+                </div>
             </div>
         </div>
 

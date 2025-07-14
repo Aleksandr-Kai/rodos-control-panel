@@ -384,28 +384,45 @@ async function changeSelectedDevices(newState) {
 // --- PRESET FUNCTIONS ---
 
 function savePreset() {
-    const presetName = prompt("Введите имя для пресета:");
+    const presetName = prompt("Введите название для группы:", presetSelect.value);
     if (!presetName) return; // Отмена сохранения
 
     const table = document.getElementById("deviceTable");
     const rows = table.getElementsByTagName("tbody")[0].getElementsByTagName("tr");
-    const presetData = {};
+    const groupColor = document.getElementById("groupColor");
+    const presetData = { color: groupColor.value };
 
     for (let i = 0; i < rows.length; i++) {
         const row = rows[i];
         const checkbox = row.cells[3].querySelector(".status-checkbox");
+        const ip = row.cells[1].getElementsByTagName("input")[0].value;
         if (checkbox) {
-            presetData[i] = checkbox.checked; // Сохраняем состояние чекбокса
+            presetData[ip] = checkbox.checked; // Сохраняем состояние чекбокса
         }
     }
 
     // Get existing presets or initialize an empty object
     let presets = JSON.parse(localStorage.getItem("presets")) || {};
+    if (presets[presetName]) {
+        let replace = prompt("Группа с таким названием существует. Напишите 'заменить' чтоб сохранить изменения.");
+        if (replace !== "заменить") return;
+
+        if (presets[presetName].color !== presetData.color) {
+            replace = prompt(
+                "Выбранный цвет группы отличается от текущего. Напишите 'заменить' чтоб сохранить изменения"
+            );
+            if (replace.toLowerCase() !== "заменить") {
+                presetData.color = presets[presetName].color;
+                alert("Цвет группы не был изменен");
+            }
+        }
+    }
     presets[presetName] = presetData;
     localStorage.setItem("presets", JSON.stringify(presets));
 
     // Update the preset select options
     updatePresetSelect();
+    location.reload();
 }
 
 function deletePreset() {
@@ -428,40 +445,202 @@ function deletePreset() {
     updatePresetSelect();
 }
 
+function sortDeviceTableByCheckbox() {
+    const table = document.getElementById("deviceTable"); // Находим таблицу по ID
+    const tbody = table.querySelector("tbody"); // Берём тело таблицы (без заголовка)
+    const rows = Array.from(tbody.querySelectorAll("tr")); // Получаем все строки
+
+    // Сортируем: checked → сверху, unchecked → снизу
+    rows.sort((rowA, rowB) => {
+        const checkboxA = rowA.cells[3].querySelector(".status-checkbox").checked;
+        const checkboxB = rowB.cells[3].querySelector(".status-checkbox").checked;
+
+        if (checkboxA === checkboxB) return 0; // Если оба равны, порядок не меняем
+        return checkboxA ? -1 : 1; // Чекбокс A отмечен? Поднимаем его
+    });
+
+    // Очищаем и перезаполняем таблицу
+    tbody.innerHTML = "";
+    rows.forEach((row) => tbody.appendChild(row));
+}
+
 function loadPreset() {
     const presetSelect = document.getElementById("presetSelect");
     const selectedPreset = presetSelect.value;
 
-    if (!selectedPreset) {
-        //  Если выбран пустой пункт, то просто ничего не делаем.
-        return;
-    }
-
-    const presets = JSON.parse(localStorage.getItem("presets")) || {};
-    const presetData = presets[selectedPreset];
-
-    if (!presetData) {
-        console.error("Preset data not found.");
-        return;
-    }
-
     const table = document.getElementById("deviceTable");
-    const rows = table.getElementsByTagName("tbody")[0].getElementsByTagName("tr");
+    const trs = table.getElementsByTagName("tbody")[0].getElementsByTagName("tr");
+    const rows = Array.from(trs);
 
-    for (let i = 0; i < rows.length; i++) {
-        const row = rows[i];
-        const checkbox = row.cells[3].querySelector(".status-checkbox");
-        if (checkbox && presetData.hasOwnProperty(i)) {
-            checkbox.checked = presetData[i]; // Восстанавливаем состояние чекбокса
+    if (!selectedPreset) {
+        for (let i = 0; i < rows.length; i++) {
+            const row = rows[i];
+            const checkbox = row.cells[3].querySelector(".status-checkbox");
+            checkbox.checked = true;
+        }
+    } else {
+        const presets = JSON.parse(localStorage.getItem("presets")) || {};
+        const presetData = presets[selectedPreset];
+        const groupColor = document.getElementById("groupColor");
+        groupColor.value = presetData.color;
+
+        if (!presetData) {
+            console.error("Preset data not found.");
+            return;
+        }
+
+        for (let i = 0; i < rows.length; i++) {
+            const row = rows[i];
+            const checkbox = row.cells[3].querySelector(".status-checkbox");
+            const ip = row.cells[1].getElementsByTagName("input")[0].value;
+            if (checkbox && presetData.hasOwnProperty(ip)) {
+                checkbox.checked = presetData[ip]; // Восстанавливаем состояние чекбокса
+            } else {
+                checkbox.checked = false;
+            }
+        }
+        sortDeviceTableByCheckbox();
+    }
+
+    saveTableData(); // Сохраняем состояния после загрузки пресета.
+}
+
+function upgradePresets() {
+    let upgrade = false;
+    const presets = JSON.parse(localStorage.getItem("presets")) || {};
+
+    for (const presetName in presets) {
+        for (const key in presets[presetName]) {
+            if (key === "color") continue;
+            if (key.length < 7) {
+                upgrade = true;
+                break;
+            }
+        }
+        if (upgrade) break;
+    }
+
+    if (!upgrade) return;
+
+    localStorage.setItem("presets_backup", JSON.stringify(presets));
+
+    const newPresets = {};
+    const devList = JSON.parse(localStorage.getItem("deviceTableData"));
+
+    for (const presetName in presets) {
+        newPresets[presetName] = {};
+        for (const key in presets[presetName]) {
+            if (key.length < 7) {
+                newPresets[presetName][devList[key].ip] = presets[presetName][key];
+            }
         }
     }
-    saveTableData(); // Сохраняем состояния после загрузки пресета.
+
+    localStorage.setItem("presets", JSON.stringify(newPresets));
+
+    console.log(`Пресеты обновлены`);
+}
+
+function saveJsonToFile(jsonStr, filename = "data.json") {
+    // 2. Создаём Blob (бинарный объект)
+    const blob = new Blob([jsonStr], { type: "application/json" });
+
+    // 3. Создаём ссылку для скачивания
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+
+    // 4. Имитируем клик и удаляем ссылку
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+}
+
+function saveParams(dest) {
+    if (dest == "dev") {
+        const devList = localStorage.getItem("deviceTableData");
+        saveJsonToFile(devList, "devList.json");
+    } else if (dest == "grp") {
+        const presets = localStorage.getItem("presets");
+        saveJsonToFile(presets, "presets.json");
+    }
+}
+
+async function loadParams(name) {
+    const fileInput = document.getElementById(name);
+
+    // Проверка, выбран ли файл
+    if (!fileInput || !fileInput.files || fileInput.files.length === 0) {
+        alert("Пожалуйста, выберите файл");
+        return;
+    }
+
+    const file = fileInput.files[0];
+
+    try {
+        // Асинхронная загрузка JSON
+        const data = await loadJsonFromFile(file);
+
+        if (!data) {
+            throw new Error("Файл пуст или не является валидным JSON");
+        }
+
+        // Сохранение в localStorage в зависимости от типа файла
+        switch (name) {
+            case "fileInput":
+                localStorage.setItem("deviceTableData", JSON.stringify(data));
+                break;
+            case "fileInputGroup":
+                localStorage.setItem("presets", JSON.stringify(data));
+                break;
+            default:
+                console.error(`Ошибка: неправильный ID элемента file (${name})`);
+                return;
+        }
+        location.reload(); // Раскомментируйте при необходимости
+        console.log("Данные успешно загружены из файла:", file.name);
+    } catch (error) {
+        console.error("Ошибка загрузки файла:", error);
+        alert(`Не удалось загрузить данные: ${error.message}`);
+    }
+}
+
+// Предполагаемая реализация функции loadJsonFromFile
+async function loadJsonFromFile(file) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+
+        reader.onload = (event) => {
+            try {
+                const result = JSON.parse(event.target.result);
+                resolve(result);
+            } catch (e) {
+                reject(new Error("Неверный формат JSON"));
+            }
+        };
+
+        reader.onerror = () => {
+            reject(new Error("Ошибка чтения файла"));
+        };
+
+        reader.readAsText(file);
+    });
 }
 
 function updatePresetSelect() {
     const presetSelect = document.getElementById("presetSelect");
+    const groupLists = document.querySelectorAll(".group-list");
+
     // Clear existing options
     presetSelect.innerHTML = '<option value="">Выберите группу</option>';
+
+    groupLists.forEach((list) => {
+        list.innerHTML =
+            `<h2 class="list-title">Группы устройств</h2>` +
+            `<div class="group-item"><div class="group-item-name">Все</div></div>`;
+    });
 
     const presets = JSON.parse(localStorage.getItem("presets")) || {};
     for (const presetName in presets) {
@@ -470,14 +649,48 @@ function updatePresetSelect() {
             option.value = presetName;
             option.text = presetName;
             presetSelect.appendChild(option);
+
+            upgradePresets();
         }
+
+        groupLists.forEach((list) => {
+            list.innerHTML += `<div class="group-item"><div class="group-item-name" style="background:${
+                presets[presetName].color || "none"
+            };"}"><span>${presetName}</span></div><div class="group-item-btn">🗶</div></div>`;
+        });
     }
+}
+
+function groupSelected(event) {
+    const presetSelect = document.getElementById("presetSelect");
+    const groupName = event.target.textContent;
+
+    if (groupName === "🗶") {
+        const deleteName = event.target.parentNode.textContent.slice(0, -2);
+        presetSelect.value = deleteName;
+        loadPreset();
+        deletePreset();
+        return;
+    }
+
+    // if (groupName === "СОХРАНИТЬ ГРУППУ") {
+    //     savePreset();
+    //     return;
+    // }
+
+    presetSelect.value = groupName;
+    loadPreset();
 }
 
 document.addEventListener("DOMContentLoaded", () => {
     // Load saved credentials from localStorage
     const savedLogin = localStorage.getItem("login");
     const savedPassword = localStorage.getItem("password");
+    const groupLists = document.querySelectorAll(".group-list");
+
+    groupLists.forEach((list) => {
+        list.addEventListener("click", groupSelected);
+    });
 
     if (savedLogin && savedPassword) {
         setLoginAndPassword(savedLogin, savedPassword);
@@ -491,7 +704,7 @@ document.addEventListener("DOMContentLoaded", () => {
     loadTableData();
     updatePresetSelect();
     updateAuthToken();
-    startLongPolling();
+    // startLongPolling();
 });
 
 // Добавляем функцию для показа/скрытия формы
