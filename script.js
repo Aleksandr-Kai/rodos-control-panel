@@ -212,6 +212,9 @@ function createTableRow(deviceName = "", ipAddress = "", channel = 1, status = "
     statusCheckbox.checked = checkboxChecked; // Устанавливаем состояние чекбокса
     statusCheckbox.addEventListener("change", () => {
         saveTableData(); // Сохраняем состояние при изменении
+        const devList = getDevListStore();
+        const checkAll = document.getElementById("checkAll");
+        checkAll.checked = !devList.find((dev) => !dev.checkboxChecked);
     });
     statusCell.appendChild(statusCheckbox);
 
