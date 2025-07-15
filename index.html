@@ -24,16 +24,41 @@
 
                 <div class="dev-list">
                     <h1>Управление устройствами</h1>
-                    <button class="add-row-button" onclick="addRow()">Добавить устройство</button>
-                    <button class="add-group-button" onclick="savePreset()">Сохранить группу</button>
-                    <input type="color" id="groupColor" value="#ff0000" />
+                    <div class="buttons-container">
+                        <button
+                            class="add-row-button"
+                            onclick="addRow()"
+                            title="Добавить в таблицу строку для нового устройства"
+                        >
+                            Добавить устройство
+                        </button>
+                        <div class="group-add-btn-container">
+                            <button
+                                class="add-group-button"
+                                onclick="savePreset()"
+                                title="Сохранить выбранные устройства как Группу"
+                            >
+                                Сохранить группу с цветом 🡆
+                            </button>
+                            <input type="color" id="groupColor" value="#ff0000" title="Задать цвет Группы" />
+                        </div>
+                    </div>
                     <table id="deviceTable">
                         <thead>
                             <tr>
                                 <th>Имя устройства</th>
                                 <th>IP</th>
                                 <th>Канал</th>
-                                <th>Состояние</th>
+                                <th>
+                                    Состояние
+                                    <input
+                                        type="checkbox"
+                                        name=""
+                                        id="checkAll"
+                                        class="status-checkbox"
+                                        onchange="checkAll(event)"
+                                    />
+                                </th>
                                 <th></th>
                             </tr>
                         </thead>
@@ -44,19 +69,20 @@
 
                     <!-- Buttons for bulk control -->
                     <div class="bulk-control-buttons">
-                        <button class="bulk-control-button on" onclick="turnOnSelected()">Включить выбранные</button>
-                        <button class="bulk-control-button off" onclick="turnOffSelected()">Выключить выбранные</button>
-                    </div>
-
-                    <!-- Preset Controls -->
-                    <div class="preset-controls">
-                        <label for="presetSelect">Группы устройств:</label>
-                        <select id="presetSelect" onchange="loadPreset()">
-                            <option value="">Выберите группу</option>
-                            <!-- Presets will be loaded here -->
-                        </select>
-                        <button onclick="savePreset()">Сохранить группу</button>
-                        <button onclick="deletePreset()">Удалить группу</button>
+                        <button
+                            class="bulk-control-button on"
+                            onclick="turnOnSelected()"
+                            title="Отправить команду ВКЛЮЧЕНИЯ всем отмеченным устройствам"
+                        >
+                            Включить выбранные
+                        </button>
+                        <button
+                            class="bulk-control-button off"
+                            onclick="turnOffSelected()"
+                            title="Отправить команду ОТКЛЮЧЕНИЯ всем отмеченным устройствам"
+                        >
+                            Выключить выбранные
+                        </button>
                     </div>
                 </div>
             </div>

@@ -4,7 +4,47 @@ let authToken = null;
 // Default credentials
 const defaultLogin = "admin";
 const defaultPassword = "admin";
+const LOCALSTORAGE_DEVLIST = "deviceTableData";
+const LOCALSTORAGE_GROUPS = "presets";
+const regexIP = /([0-9]{1,3}\.){3}[0-9]{1,3}/g;
 
+let currentGroupName = "";
+
+function isIP(str) {
+    return str.match(regexIP)?.length === 1;
+}
+
+// Store tools
+function getDevListStore(option) {
+    const data = localStorage.getItem(LOCALSTORAGE_DEVLIST);
+
+    if (option === "as string") return data || "";
+
+    if (!data) return {};
+    return JSON.parse(data);
+}
+
+function setDevlistStore(list) {
+    if (!list) return;
+
+    localStorage.setItem(LOCALSTORAGE_DEVLIST, JSON.stringify(list));
+}
+
+function getGroupListStore(option) {
+    const data = localStorage.getItem(LOCALSTORAGE_GROUPS);
+
+    if (option === "as string") return data || "";
+
+    if (!data) return {};
+    return JSON.parse(data);
+}
+
+function setGroupListStore(list) {
+    if (!list) return;
+
+    localStorage.setItem(LOCALSTORAGE_GROUPS, JSON.stringify(list));
+}
+//-------------------------------------------------------------------------------
 function setLoginAndPassword(login, password) {
     document.getElementById("login").value = login;
     document.getElementById("password").value = password;
@@ -182,6 +222,9 @@ function createTableRow(deviceName = "", ipAddress = "", channel = 1, status = "
     deleteButton.className = "delete-button";
     deleteButton.textContent = "Удалить";
     deleteButton.addEventListener("click", () => {
+        if (!confirm(`Удалить устройство?`)) {
+            return;
+        }
         row.remove();
         saveTableData();
     });
@@ -212,9 +255,10 @@ function getAllChannelsStatesForIP(ip) {
     return states;
 }
 
-function addRow(deviceName = "", ipAddress = "", channel = 1, status = "off", checkboxChecked = false) {
+function addRow(deviceName = "", ipAddress = "", channel = 1, status = "off", checkboxChecked = false, color) {
     const tableBody = document.getElementById("deviceTable").getElementsByTagName("tbody")[0];
     const newRow = createTableRow(deviceName, ipAddress, channel, status, checkboxChecked); // Передаем состояние чекбокса
+    // if (color && checkboxChecked) newRow.style.backgroundColor = color;
     tableBody.appendChild(newRow);
     saveTableData();
 }
@@ -242,17 +286,14 @@ function saveTableData() {
             checkboxChecked: checkboxChecked, // Сохраняем состояние чекбокса
         });
     }
-    localStorage.setItem("deviceTableData", JSON.stringify(data));
+    setDevlistStore(data);
 }
 
 function loadTableData() {
-    const data = localStorage.getItem("deviceTableData");
-    if (data) {
-        const parsedData = JSON.parse(data);
-        parsedData.forEach((item) => {
-            addRow(item.name, item.ip, item.channel, item.status, item.checkboxChecked); // Передаем состояние чекбокса
-        });
-    }
+    const devList = getDevListStore();
+    devList.forEach((item) => {
+        addRow(item.name, item.ip, item.channel, item.status, item.checkboxChecked); // Передаем состояние чекбокса
+    });
 }
 
 // Функция для обновления состояния кнопок на основе данных getRel
@@ -384,7 +425,7 @@ async function changeSelectedDevices(newState) {
 // --- PRESET FUNCTIONS ---
 
 function savePreset() {
-    const presetName = prompt("Введите название для группы:", presetSelect.value);
+    const presetName = prompt("Введите название для группы:", currentGroupName);
     if (!presetName) return; // Отмена сохранения
 
     const table = document.getElementById("deviceTable");
@@ -396,13 +437,15 @@ function savePreset() {
         const row = rows[i];
         const checkbox = row.cells[3].querySelector(".status-checkbox");
         const ip = row.cells[1].getElementsByTagName("input")[0].value;
-        if (checkbox) {
-            presetData[ip] = checkbox.checked; // Сохраняем состояние чекбокса
+        const chan = row.cells[2].getElementsByTagName("select")[0].value;
+        if (checkbox?.checked) {
+            if (!presetData[ip]) presetData[ip] = {};
+            presetData[ip][chan] = checkbox.checked; // Сохраняем состояние чекбокса
         }
     }
 
     // Get existing presets or initialize an empty object
-    let presets = JSON.parse(localStorage.getItem("presets")) || {};
+    let presets = getGroupListStore();
     if (presets[presetName]) {
         let replace = prompt("Группа с таким названием существует. Напишите 'заменить' чтоб сохранить изменения.");
         if (replace !== "заменить") return;
@@ -418,29 +461,23 @@ function savePreset() {
         }
     }
     presets[presetName] = presetData;
-    localStorage.setItem("presets", JSON.stringify(presets));
+
+    setGroupListStore(presets);
 
     // Update the preset select options
     updatePresetSelect();
     location.reload();
 }
 
-function deletePreset() {
-    const presetSelect = document.getElementById("presetSelect");
-    const selectedPreset = presetSelect.value;
-
-    if (!selectedPreset) {
-        alert("Выберите группу для удаления.");
+function deletePreset(groupName) {
+    if (!confirm(`Удалить группу "${groupName}"?`)) {
         return;
     }
 
-    if (!confirm(`Удалить группу "${selectedPreset}"?`)) {
-        return;
-    }
+    let presets = getGroupListStore();
+    delete presets[groupName];
 
-    let presets = JSON.parse(localStorage.getItem("presets")) || {};
-    delete presets[selectedPreset];
-    localStorage.setItem("presets", JSON.stringify(presets));
+    setGroupListStore(presets);
 
     updatePresetSelect();
 }
@@ -464,81 +501,111 @@ function sortDeviceTableByCheckbox() {
     rows.forEach((row) => tbody.appendChild(row));
 }
 
-function loadPreset() {
-    const presetSelect = document.getElementById("presetSelect");
-    const selectedPreset = presetSelect.value;
-
-    const table = document.getElementById("deviceTable");
-    const trs = table.getElementsByTagName("tbody")[0].getElementsByTagName("tr");
-    const rows = Array.from(trs);
-
-    if (!selectedPreset) {
-        for (let i = 0; i < rows.length; i++) {
-            const row = rows[i];
-            const checkbox = row.cells[3].querySelector(".status-checkbox");
-            checkbox.checked = true;
-        }
-    } else {
-        const presets = JSON.parse(localStorage.getItem("presets")) || {};
-        const presetData = presets[selectedPreset];
-        const groupColor = document.getElementById("groupColor");
-        groupColor.value = presetData.color;
-
-        if (!presetData) {
-            console.error("Preset data not found.");
-            return;
-        }
-
-        for (let i = 0; i < rows.length; i++) {
-            const row = rows[i];
-            const checkbox = row.cells[3].querySelector(".status-checkbox");
-            const ip = row.cells[1].getElementsByTagName("input")[0].value;
-            if (checkbox && presetData.hasOwnProperty(ip)) {
-                checkbox.checked = presetData[ip]; // Восстанавливаем состояние чекбокса
-            } else {
-                checkbox.checked = false;
-            }
-        }
-        sortDeviceTableByCheckbox();
-    }
-
-    saveTableData(); // Сохраняем состояния после загрузки пресета.
+function isEmpty(obj) {
+    return Object.keys(obj).length === 0;
 }
 
-function upgradePresets() {
-    let upgrade = false;
-    const presets = JSON.parse(localStorage.getItem("presets")) || {};
+function cleanGroup(groupName) {
+    const group = getGroupListStore()[groupName];
+    const devList = getDevListStore();
+
+    let updated = false;
+
+    for (ip in group) {
+        if (ip === "color") continue;
+        for (channel in group[ip]) {
+            const found = devList.find((dev) => dev.ip === ip && dev.channel === channel);
+            if (!found) {
+                console.log(`Будет удалено: ${ip}-${channel}`);
+                updated = true;
+                delete group[ip][channel];
+                if (isEmpty(group[ip])) delete group[ip];
+            }
+        }
+    }
+
+    if (updated) {
+        const groups = getGroupListStore();
+        groups[groupName] = group;
+        setGroupListStore(groups);
+    }
+}
+
+function loadPreset() {
+    cleanGroup(currentGroupName);
+    const group = getGroupListStore()[currentGroupName];
+    const devList = getDevListStore();
+    const groupColor = document.getElementById("groupColor");
+    groupColor.value = group?.color || "black";
+    const table = document.getElementById("deviceTable");
+    const tbody = table.querySelector("tbody"); // Берём тело таблицы (без заголовка)
+    tbody.innerHTML = "";
+
+    devList.forEach((item) => {
+        if (group) {
+            const dev = group[item.ip] || {};
+            item.checkboxChecked = dev[item.channel] || false;
+        } else {
+            if (currentGroupName === "Все") item.checkboxChecked = true;
+            else item.checkboxChecked = false;
+        }
+    });
+
+    if (group)
+        devList.sort((devA, devB) => {
+            const checkboxA = devA.checkboxChecked;
+            const checkboxB = devB.checkboxChecked;
+
+            if (checkboxA === checkboxB) return 0; // Если оба равны, порядок не меняем
+            return checkboxA ? -1 : 1; // Чекбокс A отмечен? Поднимаем его
+        });
+    else
+        devList.sort((devA, devB) => {
+            const checkboxA = devA.name;
+            const checkboxB = devB.name;
+
+            if (checkboxA > checkboxB) return 0; // Если оба равны, порядок не меняем
+            return checkboxA ? -1 : 1; // Чекбокс A отмечен? Поднимаем его
+        });
+
+    devList.forEach((item) => {
+        addRow(item.name, item.ip, item.channel, item.status, item.checkboxChecked, group?.color); // Передаем состояние чекбокса
+    });
+}
+
+function upgradeStore() {
+    const devList = getDevListStore();
+    const presets = getGroupListStore();
+    const newPresets = {};
+
+    localStorage.setItem("presets_backup", JSON.stringify(presets));
+
+    for (const presetName in presets) {
+        newPresets[presetName] = { color: "white" };
+        for (const devKey in presets[presetName]) {
+            // в пресете вместо ключа индекс устройства в devList
+            const device = devList[devKey];
+            newPresets[presetName][device.ip] = { [device.channel]: presets[presetName][devKey] };
+        }
+    }
+
+    setGroupListStore(newPresets);
+
+    console.log(`Пресеты обновлены`);
+}
+
+function tryUpgradePresets() {
+    const presets = getGroupListStore();
 
     for (const presetName in presets) {
         for (const key in presets[presetName]) {
             if (key === "color") continue;
-            if (key.length < 7) {
-                upgrade = true;
-                break;
-            }
-        }
-        if (upgrade) break;
-    }
-
-    if (!upgrade) return;
-
-    localStorage.setItem("presets_backup", JSON.stringify(presets));
-
-    const newPresets = {};
-    const devList = JSON.parse(localStorage.getItem("deviceTableData"));
-
-    for (const presetName in presets) {
-        newPresets[presetName] = {};
-        for (const key in presets[presetName]) {
-            if (key.length < 7) {
-                newPresets[presetName][devList[key].ip] = presets[presetName][key];
+            if (!isIP(key)) {
+                upgradeStore();
+                return;
             }
         }
     }
-
-    localStorage.setItem("presets", JSON.stringify(newPresets));
-
-    console.log(`Пресеты обновлены`);
 }
 
 function saveJsonToFile(jsonStr, filename = "data.json") {
@@ -560,10 +627,10 @@ function saveJsonToFile(jsonStr, filename = "data.json") {
 
 function saveParams(dest) {
     if (dest == "dev") {
-        const devList = localStorage.getItem("deviceTableData");
+        const devList = getDevListStore("as string");
         saveJsonToFile(devList, "devList.json");
     } else if (dest == "grp") {
-        const presets = localStorage.getItem("presets");
+        const presets = getGroupListStore("as string");
         saveJsonToFile(presets, "presets.json");
     }
 }
@@ -590,10 +657,10 @@ async function loadParams(name) {
         // Сохранение в localStorage в зависимости от типа файла
         switch (name) {
             case "fileInput":
-                localStorage.setItem("deviceTableData", JSON.stringify(data));
+                setDevlistStore(data);
                 break;
             case "fileInputGroup":
-                localStorage.setItem("presets", JSON.stringify(data));
+                setGroupListStore(data);
                 break;
             default:
                 console.error(`Ошибка: неправильный ID элемента file (${name})`);
@@ -630,27 +697,24 @@ async function loadJsonFromFile(file) {
 }
 
 function updatePresetSelect() {
-    const presetSelect = document.getElementById("presetSelect");
     const groupLists = document.querySelectorAll(".group-list");
 
-    // Clear existing options
-    presetSelect.innerHTML = '<option value="">Выберите группу</option>';
+    // groupLists.forEach((list) => {
+    //     list.innerHTML =
+    //         `<h2 class="list-title">Группы устройств</h2>` +
+    //         `<div class="group-item"><div class="group-item-name">Все</div></div>`;
+    // });
 
     groupLists.forEach((list) => {
-        list.innerHTML =
-            `<h2 class="list-title">Группы устройств</h2>` +
-            `<div class="group-item"><div class="group-item-name">Все</div></div>`;
+        list.innerHTML = `<h2 class="list-title">Группы устройств</h2>`;
     });
 
-    const presets = JSON.parse(localStorage.getItem("presets")) || {};
+    const presets = getGroupListStore();
     for (const presetName in presets) {
         if (presets.hasOwnProperty(presetName)) {
             const option = document.createElement("option");
             option.value = presetName;
             option.text = presetName;
-            presetSelect.appendChild(option);
-
-            upgradePresets();
         }
 
         groupLists.forEach((list) => {
@@ -662,28 +726,24 @@ function updatePresetSelect() {
 }
 
 function groupSelected(event) {
-    const presetSelect = document.getElementById("presetSelect");
+    if (event.target.classList.contains("group-list")) return;
     const groupName = event.target.textContent;
 
     if (groupName === "🗶") {
         const deleteName = event.target.parentNode.textContent.slice(0, -2);
-        presetSelect.value = deleteName;
-        loadPreset();
-        deletePreset();
+        deletePreset(deleteName);
         return;
     }
 
-    // if (groupName === "СОХРАНИТЬ ГРУППУ") {
-    //     savePreset();
-    //     return;
-    // }
-
-    presetSelect.value = groupName;
+    // if (groupName === "Все") currentGroupName = "";
+    // else currentGroupName = groupName;
+    currentGroupName = groupName;
     loadPreset();
 }
 
 document.addEventListener("DOMContentLoaded", () => {
     // Load saved credentials from localStorage
+    tryUpgradePresets();
     const savedLogin = localStorage.getItem("login");
     const savedPassword = localStorage.getItem("password");
     const groupLists = document.querySelectorAll(".group-list");
@@ -710,7 +770,14 @@ document.addEventListener("DOMContentLoaded", () => {
 // Добавляем функцию для показа/скрытия формы
 function toggleLoginForm() {
     const loginForm = document.querySelector(".login-form");
+    const layout = document.querySelector(".layout");
+    const footer = document.querySelector(".save-load-block");
+    const body = document.querySelector("body");
+
     loginForm.style.display = loginForm.style.display === "block" ? "none" : "block";
+    layout.style.visibility = loginForm.style.display === "block" ? "hidden" : "visible";
+    footer.style.visibility = loginForm.style.display === "block" ? "hidden" : "visible";
+    body.style.backgroundColor = loginForm.style.display === "block" ? "black" : "white";
 }
 
 // Добавляем функцию для "аутентификации" (сохранение данных)
@@ -725,4 +792,9 @@ function login() {
     updateAuthToken(); // Обновляем "токен"
 
     toggleLoginForm(); // Закрываем форму
+}
+
+function checkAll(event) {
+    currentGroupName = event.target.checked ? "Все" : "Ничего";
+    loadPreset();
 }
