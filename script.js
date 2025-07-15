@@ -744,6 +744,8 @@ function groupSelected(event) {
         return;
     }
 
+    if (groupName.match("🗶")) return;
+
     // if (groupName === "Все") currentGroupName = "";
     // else currentGroupName = groupName;
     currentGroupName = groupName;
