@@ -17,8 +17,16 @@ body {
     display: flex;
     flex-direction: row;
     gap: 10px;
-    margin-top: 10px;
+    margin-top: 40px;
     width: 100%;
+}
+
+#group-name-lable {
+    font-size: x-large;
+    max-width: 45%;
+    overflow: scroll;
+    scrollbar-width: none;
+    max-height: 42px;
 }
 
 .list-title {
@@ -167,6 +175,7 @@ tr:has(.status-checkbox:not(:checked)):hover * {
 .buttons-container {
     display: flex;
     justify-content: space-between;
+    /* gap: 10px; */
 }
 
 #groupColor {

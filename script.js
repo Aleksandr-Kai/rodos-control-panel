@@ -428,7 +428,8 @@ async function changeSelectedDevices(newState) {
 // --- PRESET FUNCTIONS ---
 
 function savePreset() {
-    const presetName = prompt("Введите название для группы:", currentGroupName);
+    const showName = currentGroupName === "Все" || currentGroupName === "Ничего" ? "" : currentGroupName;
+    const presetName = prompt("Введите название для группы:", showName);
     if (!presetName) return; // Отмена сохранения
 
     const table = document.getElementById("deviceTable");
@@ -535,6 +536,7 @@ function cleanGroup(groupName) {
 }
 
 function loadPreset() {
+    document.getElementById("group-name-lable").textContent = currentGroupName;
     cleanGroup(currentGroupName);
     const group = getGroupListStore()[currentGroupName];
     const devList = getDevListStore();
@@ -708,8 +710,12 @@ function updatePresetSelect() {
     //         `<div class="group-item"><div class="group-item-name">Все</div></div>`;
     // });
 
+    // groupLists.forEach((list) => {
+    //     list.innerHTML = `<h2 class="list-title">Группы устройств</h2>`;
+    // });
+
     groupLists.forEach((list) => {
-        list.innerHTML = `<h2 class="list-title">Группы устройств</h2>`;
+        list.innerHTML = ``;
     });
 
     const presets = getGroupListStore();
