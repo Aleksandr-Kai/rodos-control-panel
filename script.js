@@ -454,15 +454,15 @@ function savePreset() {
         let replace = prompt("Группа с таким названием существует. Напишите 'заменить' чтоб сохранить изменения.");
         if (replace !== "заменить") return;
 
-        if (presets[presetName].color !== presetData.color) {
-            replace = prompt(
-                "Выбранный цвет группы отличается от текущего. Напишите 'заменить' чтоб сохранить изменения"
-            );
-            if (replace.toLowerCase() !== "заменить") {
-                presetData.color = presets[presetName].color;
-                alert("Цвет группы не был изменен");
-            }
-        }
+        // if (presets[presetName].color !== presetData.color) {
+        //     replace = prompt(
+        //         "Выбранный цвет группы отличается от текущего. Напишите 'заменить' чтоб сохранить изменения"
+        //     );
+        //     if (replace.toLowerCase() !== "заменить") {
+        // presetData.color = presets[presetName].color;
+        // alert("Цвет группы не был изменен");
+        //     }
+        // }
     }
     presets[presetName] = presetData;
 
@@ -590,6 +590,7 @@ function upgradeStore() {
         for (const devKey in presets[presetName]) {
             // в пресете вместо ключа индекс устройства в devList
             const device = devList[devKey];
+            if (!device) continue;
             newPresets[presetName][device.ip] = { [device.channel]: presets[presetName][devKey] };
         }
     }
