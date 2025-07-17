@@ -8,6 +8,8 @@ const LOCALSTORAGE_DEVLIST = "deviceTableData";
 const LOCALSTORAGE_GROUPS = "presets";
 const regexIP = /([0-9]{1,3}\.){3}[0-9]{1,3}/g;
 
+let debug = false;
+
 let currentGroupName = "";
 
 function isIP(str) {
@@ -343,6 +345,7 @@ function updateStatusButtons(results, timestamp) {
 
 // Функция для выполнения Long Polling
 async function startLongPolling() {
+    if (debug) return;
     const table = document.getElementById("deviceTable");
     const rows = table.getElementsByTagName("tbody")[0].getElementsByTagName("tr");
     const ips = [];
@@ -747,8 +750,6 @@ function groupSelected(event) {
 
     if (groupName.match("🗶")) return;
 
-    // if (groupName === "Все") currentGroupName = "";
-    // else currentGroupName = groupName;
     currentGroupName = groupName;
     loadPreset();
 }
@@ -776,7 +777,7 @@ document.addEventListener("DOMContentLoaded", () => {
     loadTableData();
     updatePresetSelect();
     updateAuthToken();
-    // startLongPolling();
+    if (!debug) startLongPolling();
 });
 
 // Добавляем функцию для показа/скрытия формы
